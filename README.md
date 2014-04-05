@@ -15,22 +15,22 @@ Add the following dependency to your `pom.xml` file:
 </dependency>
 ````
 
-*Or* copy the jar file to the Wisdom's +Application+ directory.
+*Or* copy the jar file to the Wisdom's `Application` directory.
 
 ## Configuration
 
-The configuration can be done either from the +application.conf+ file (+src/main/configuration/application.conf+) or
+The configuration can be done either from the `application.conf` file (`src/main/configuration/application.conf`) or
 using system properties. For all the properties described below you can use either way.
 
 | Property               | Description                                                                | Default Value  |
 | ---------------------- |:--------------------------------------------------------------------------:| --------------:|
-| +mail.smtp.connection+ |the connection type among +NO_AUTH+, +SSL+ and +TLS+                        |+NO_AUTH+       |
-| +mail.smtp.host+       |the SMTP server hostname (such as _smtp.gmail.com_)                         |Mock Server     |
-| +mail.smtp.port+       |the STMP server port. Default is computed according to the connection type. |25 or 465       |
-| +mail.smtp.from+       |the default _from_ address used by the mail sent when it is not explicitly set| No value     |
-| +mail.smtp.username+   |the account username when the service requires authentication               | _required_     |
-| +mail.smtp.password+   |the account password when the service requires authentication               | _required_     |
-| +mail.smtp.debug+      |enables the debug mode dumping lots of information about the mail sending process |false     |
+| `mail.smtp.connection` |the connection type among `NO_AUTH`, `SSL` and `TLS`                        |`NO_AUTH`       |
+| `mail.smtp.host`       |the SMTP server hostname (such as _smtp.gmail.com_)                         |Mock Server     |
+| `mail.smtp.port`       |the STMP server port. Default is computed according to the connection type. |25 or 465       |
+| `mail.smtp.from`       |the default _from_ address used by the mail sent when it is not explicitly set| No value     |
+| `mail.smtp.username`   |the account username when the service requires authentication               | _required_     |
+| `mail.smtp.password`   |the account password when the service requires authentication               | _required_     |
+| `mail.smtp.debug`      |enables the debug mode dumping lots of information about the mail sending process |false     |
 
 ### Examples
 
@@ -49,7 +49,7 @@ mail.smtp.password = pwd
 ````
 
 The username and password can be set using system properties (as well as all other properties). In this case the
-+application.conf+ file would contain:
+`application.conf` file would contain:
 
 ````
 # Mailer configuration
@@ -100,5 +100,5 @@ public class Example extends DefaultController {
 }
 ````
 
-The +MailerSenderService+ is injected using the +@Requires+ annotation, then you can use it directly.
+The `MailerSenderService` is injected using the `@Requires` annotation, then you can use it directly.
 
