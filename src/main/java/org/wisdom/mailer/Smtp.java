@@ -30,15 +30,9 @@ import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 import javax.mail.*;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
+import javax.mail.internet.*;
 import java.io.File;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * A implementation of the Mail Sender Service using SMTP.
@@ -140,26 +134,7 @@ public class Smtp implements MailSenderService {
 
         debug = configuration.getBooleanWithDefault("mail.smtp.debug", false);
 
-        switch (connection) {
-            case SSL:
-                properties.put(CONFAUTH, Boolean.toString(true));
-                properties.put("mail.smtp.socketFactory.port", Integer.toString(port));
-                properties.put("mail.smtp.socketFactory.class", javax.net.ssl.SSLSocketFactory.class.getName());
-                sslAuthentication = new javax.mail.Authenticator() {
-                    protected javax.mail.PasswordAuthentication getPasswordAuthentication() {
-                        return new javax.mail.PasswordAuthentication(username, password);
-                    }
-                };
-                break;
-            case TLS:
-                properties.put(CONFAUTH, Boolean.toString(true));
-                properties.put("mail.smtp.starttls.enable", Boolean.toString(true));
-                break;
-            case NO_AUTH:
-            default:
-                properties.put(CONFAUTH, Boolean.toString(false));
-                break;
-        }
+        manageConnectionType();
 
         LOGGER.info("Configuring Wisdom Mailer with:");
         @SuppressWarnings("unchecked") final Enumeration<String> enumeration =
@@ -175,6 +150,29 @@ public class Smtp implements MailSenderService {
             LOGGER.info("\tpassword set but not displayed");
         }
         LOGGER.info("\tfrom: " + from);
+    }
+
+    private void manageConnectionType() {
+        switch (connection) {
+            case SSL:
+                properties.put(CONFAUTH, Boolean.toString(true));
+                properties.put("mail.smtp.socketFactory.port", Integer.toString(port));
+                properties.put("mail.smtp.socketFactory.class", javax.net.ssl.SSLSocketFactory.class.getName());
+                sslAuthentication = new Authenticator() {
+                    protected PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication(username, password);
+                    }
+                };
+                break;
+            case TLS:
+                properties.put(CONFAUTH, Boolean.toString(true));
+                properties.put("mail.smtp.starttls.enable", Boolean.toString(true));
+                break;
+            case NO_AUTH:
+            default:
+                properties.put(CONFAUTH, Boolean.toString(false));
+                break;
+        }
     }
 
     @Updated
@@ -232,11 +230,13 @@ public class Smtp implements MailSenderService {
 
     /**
      * Sends the given mail object.
+     * The mail to be sent must have a valid `to` clause, meaning not {@literal null} or empty,
+     * and none of the addresses must be {@literal null}.
      *
      * @param mail the mail
-     * @throws Exception if the mail cannot be sent.
+     * @throws MessagingException if the mail cannot be sent.
      */
-    public void send(Mail mail) throws Exception {
+    public void send(Mail mail) throws MessagingException {
         if (mail.to() == null || mail.to().isEmpty()) {
             throw new IllegalArgumentException("The given 'to' is null or empty");
         }
@@ -245,49 +245,20 @@ public class Smtp implements MailSenderService {
             mail.from(from);
         }
 
-        if (useMock) {
-            sendMessageWithMockServer(mail);
-            return;
-        }
-
         Transport transport = null;
         final ClassLoader original = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(Smtp.class.getClassLoader());
             Session session = Session.getDefaultInstance(properties, sslAuthentication);
-            //Session.getInstance(properties, sslAuthentication);
 
             session.setDebug(debug);
             // create a message
             MimeMessage msg = new MimeMessage(session);
             msg.setFrom(new InternetAddress(from));
 
-            // Manage to.
-            List<String> to = mail.to();
-            InternetAddress[] address = new InternetAddress[to.size()];
-            for (int index = 0; index < to.size(); index++) {
-                String t = to.get(index);
-                if (t == null) {
-                    throw new NullPointerException("A 'to' address is null");
-                } else {
-                    address[index] = new InternetAddress(t);
-                }
-            }
-            msg.setRecipients(Message.RecipientType.TO, address);
-
-            // Manage cc.
-            List<String> cc = mail.cc();
-            InternetAddress[] addressCC = new InternetAddress[cc.size()];
-            for (int index = 0; index < cc.size(); index++) {
-                String t = cc.get(index);
-                if (t == null) {
-                    throw new NullPointerException("A 'cc' address is null");
-                } else {
-                    addressCC[index] = new InternetAddress(t);
-                }
-            }
-            msg.setRecipients(Message.RecipientType.CC, addressCC);
-
+            // Manage to and cc
+            msg.setRecipients(Message.RecipientType.TO, convert(mail.to()));
+            msg.setRecipients(Message.RecipientType.CC, convert(mail.cc()));
 
             msg.setSubject(mail.subject());
 
@@ -295,34 +266,19 @@ public class Smtp implements MailSenderService {
             msg.setSentDate(sent);
             mail.sent(sent);
 
-            // create the Multipart and its parts to it
-            Multipart mp = new MimeMultipart();
+            addBodyToMessage(mail, msg);
 
-            // create and fill the first message part
-            MimeBodyPart mbp1 = new MimeBodyPart();
-            mbp1.setText(mail.body());
-            mp.addBodyPart(mbp1);
-
-            List<File> attachments = mail.attachments();
-            if (attachments != null && !attachments.isEmpty()) {
-                for (File file : attachments) {
-                    MimeBodyPart part = new MimeBodyPart();
-                    DataSource source = new FileDataSource(file);
-                    part.setDataHandler(new DataHandler(source));
-                    part.setFileName(file.getName());
-                    mp.addBodyPart(part);
-                }
+            if (useMock) {
+                sendMessageWithMockServer(mail, msg);
+                return;
             }
 
-            // add the Multipart to the message
-            msg.setContent(mp);
-
-            // send the message
             if (useSmtps) {
                 transport = session.getTransport("smtps");
             } else {
                 transport = session.getTransport("smtp");
             }
+
             if (connection == Connection.TLS) {
                 transport.connect(host,
                         port, username, password);
@@ -338,17 +294,64 @@ public class Smtp implements MailSenderService {
         }
     }
 
-    private void sendMessageWithMockServer(Mail mail) {
-        LOGGER.info("Sending mail:");
-        LOGGER.info("\tFrom: " + mail.from());
-        LOGGER.info("\tTo: " + mail.to());
-        if (!mail.cc().isEmpty()) {
-            LOGGER.info("\tCC: " + mail.cc());
+    private void addBodyToMessage(Mail mail, MimeMessage msg) throws MessagingException {
+        // create the Multipart and its parts to it
+        Multipart mp = new MimeMultipart();
+
+        // create and fill the first message part
+        MimeBodyPart body = new MimeBodyPart();
+        body.setText(mail.body());
+        mp.addBodyPart(body);
+
+        List<File> attachments = mail.attachments();
+        if (attachments != null && !attachments.isEmpty()) {
+            for (File file : attachments) {
+                MimeBodyPart part = new MimeBodyPart();
+                DataSource source = new FileDataSource(file);
+                part.setDataHandler(new DataHandler(source));
+                part.setFileName(file.getName());
+                mp.addBodyPart(part);
+            }
         }
-        LOGGER.info("\tSubject: " + mail.subject());
+
+        // add the Multipart to the message
+        msg.setContent(mp);
+    }
+
+    /**
+     * Prints the mail info with the logger.
+     *
+     * @param mail the mail
+     * @param msg  the mime message
+     * @throws MessagingException if the message if malformed.
+     */
+    private void sendMessageWithMockServer(Mail mail, MimeMessage msg) throws MessagingException {
+        Enumeration enumeration = msg.getAllHeaderLines();
+        LOGGER.info("Sending mail:");
+        while (enumeration.hasMoreElements()) {
+            String line = (String) enumeration.nextElement();
+            LOGGER.info("\t" + line);
+        }
         LOGGER.info(SEPARATOR);
         LOGGER.info(mail.body());
         LOGGER.info(SEPARATOR);
+
+        LOGGER.info(SEPARATOR);
+    }
+
+    /**
+     * Converts the list of addresses to an array of {@link javax.mail.internet.InternetAddress}.
+     *
+     * @param addresses the addresses, must not be {@literal null}, but can be empty.
+     * @return the array of Internet Addresses, empty if the input list is empty.
+     * @throws AddressException if one of the address from 'addresses' is invalid.
+     */
+    public static InternetAddress[] convert(List<String> addresses) throws AddressException {
+        List<InternetAddress> list = new ArrayList<>();
+        for (String ad : addresses) {
+            list.add(new InternetAddress(ad));
+        }
+        return list.toArray(new InternetAddress[addresses.size()]);
     }
 
     /**
