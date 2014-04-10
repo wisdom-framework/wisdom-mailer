@@ -67,4 +67,34 @@ public class SmtpTest {
         assertThat(smtp.password).isNull();
     }
 
+    @Test
+    public void testCharsetAndMime() throws Exception {
+        Smtp smtp = new Smtp();
+        smtp.configuration = mock(ApplicationConfiguration.class);
+
+        when(smtp.configuration.getWithDefault(anyString(), anyString())).then(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                return invocation.getArguments()[1];
+            }
+        });
+
+        when(smtp.configuration.getIntegerWithDefault(anyString(), anyInt())).then(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                return invocation.getArguments()[1];
+            }
+        });
+
+        smtp.configure();
+
+        smtp.send(new Mail().to("me@me.com").subject("subject").body("Hello").charset("utf-9").subType("py"));
+
+        assertThat(smtp.from).contains("mock-mailer");
+        assertThat(smtp.port).isEqualTo(25);
+        assertThat(smtp.host).isEqualTo("mock");
+        assertThat(smtp.username).isNull();
+        assertThat(smtp.password).isNull();
+    }
+
 }

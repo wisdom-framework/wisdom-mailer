@@ -300,7 +300,7 @@ public class Smtp implements MailSenderService {
 
         // create and fill the first message part
         MimeBodyPart body = new MimeBodyPart();
-        body.setText(mail.body());
+        body.setText(mail.body(), mail.charset(), mail.subType());
         mp.addBodyPart(body);
 
         List<File> attachments = mail.attachments();
@@ -326,12 +326,15 @@ public class Smtp implements MailSenderService {
      * @throws MessagingException if the message if malformed.
      */
     private void sendMessageWithMockServer(Mail mail, MimeMessage msg) throws MessagingException {
-        Enumeration enumeration = msg.getAllHeaderLines();
+        Enumeration enumeration = msg.getAllHeaders();
         LOGGER.info("Sending mail:");
         while (enumeration.hasMoreElements()) {
-            String line = (String) enumeration.nextElement();
-            LOGGER.info("\t" + line);
+            Header header = (Header) enumeration.nextElement();
+            LOGGER.info("\t" + header.getName() + " = " + header.getValue());
         }
+        LOGGER.info("\t" + "Content-Type" + " = " + msg.getContentType());
+        LOGGER.info("\t" + "Encoding" + " = " + msg.getEncoding());
+
         LOGGER.info(SEPARATOR);
         LOGGER.info(mail.body());
         LOGGER.info(SEPARATOR);

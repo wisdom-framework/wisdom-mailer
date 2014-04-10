@@ -19,8 +19,7 @@
  */
 package org.wisdom.mailer;
 
-import javax.inject.Inject;
-
+import com.google.common.base.Charsets;
 import org.apache.felix.ipojo.Pojo;
 import org.junit.After;
 import org.junit.Test;
@@ -29,6 +28,7 @@ import org.ow2.chameleon.mail.Mail;
 import org.ow2.chameleon.mail.MailSenderService;
 import org.wisdom.test.parents.WisdomTest;
 
+import javax.inject.Inject;
 import java.util.Properties;
 
 /**
@@ -57,9 +57,9 @@ public class SmtpIT extends WisdomTest {
     @Category(Mock.class)
     public void mock() throws Exception {
         mailer.send(new Mail()
-            .to("clement@wisdom.org")
-            .subject("Hello from wisdom")
-            .body("Hi !"));
+                .to("clement@wisdom.org")
+                .subject("Hello from wisdom")
+                .body("Hi !"));
     }
 
     @Test
@@ -74,6 +74,23 @@ public class SmtpIT extends WisdomTest {
                 .to("clement.escoffier@gmail.com")
                 .subject("[IT-TEST] Hello from wisdom")
                 .body("This is a test. Wisdom is sending this mail using its own mailer service. \n Wisdom"));
+    }
+
+    @Test
+    @Category(Real.class)
+    public void gmailWithCharsetAndMime() throws Exception {
+        // We set the system properties to use gmail and force the instance to be reconfigured.
+        setGmailProperties();
+        ((Pojo) mailer).getComponentInstance().reconfigure(new Properties());
+
+        mailer.send(new Mail()
+                .from(USERNAME)
+                .to("clement.escoffier@gmail.com")
+                .subject("[IT-TEST] Data")
+                .body("<html><body><h1>Hello</h1><p>Here is data using accent and symbols - å é è ß ∑ Ω " +
+                        "</p></body></html>")
+                .charset(Charsets.UTF_8.toString())
+                .subType("html"));
     }
 
     private void setGmailProperties() {
