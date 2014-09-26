@@ -32,6 +32,7 @@ import javax.activation.FileDataSource;
 import javax.mail.*;
 import javax.mail.internet.*;
 import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.util.*;
 
 /**
@@ -75,6 +76,11 @@ public class Smtp implements MailSenderService {
     protected String from;
 
     /**
+     * The name of the sender.
+     */
+    protected String from_name;
+
+    /**
      * The port.
      */
     protected int port;
@@ -112,6 +118,7 @@ public class Smtp implements MailSenderService {
     protected void configure() {
         host = configuration.getWithDefault(CONFHOST, MOCK_SERVER_NAME);
         from = configuration.getWithDefault("mail.smtp.from", DEFAULT_FROM);
+        from_name = configuration.getWithDefault("mail.smtp.from.name", null);
         useMock = MOCK_SERVER_NAME.equals(host);
 
         properties = new Properties();
@@ -236,7 +243,7 @@ public class Smtp implements MailSenderService {
      * @param mail the mail
      * @throws MessagingException if the mail cannot be sent.
      */
-    public void send(Mail mail) throws MessagingException {
+    public void send(Mail mail) throws MessagingException, UnsupportedEncodingException {
         if (mail.to() == null || mail.to().isEmpty()) {
             throw new IllegalArgumentException("The given 'to' is null or empty");
         }
@@ -254,7 +261,12 @@ public class Smtp implements MailSenderService {
             session.setDebug(debug);
             // create a message
             MimeMessage msg = new MimeMessage(session);
-            msg.setFrom(new InternetAddress(from));
+            if(from_name!=null){
+                msg.setFrom(new InternetAddress(from, from_name));
+            }else {
+                msg.setFrom(new InternetAddress(from));    
+            }
+            
 
             // Manage to and cc
             msg.setRecipients(Message.RecipientType.TO, convert(mail.to()));
