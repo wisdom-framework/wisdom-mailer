@@ -300,7 +300,12 @@ public class Smtp implements MailSenderService {
 
         // create and fill the first message part
         MimeBodyPart body = new MimeBodyPart();
-        body.setText(mail.body(), mail.charset(), mail.subType());
+        if (mail.subType() != null) {
+            body.setText(mail.body(), mail.charset(), mail.subType());
+        } else {
+            // Plain by default.
+            body.setText(mail.body(), mail.charset(), "plain");
+        }
         mp.addBodyPart(body);
 
         List<File> attachments = mail.attachments();

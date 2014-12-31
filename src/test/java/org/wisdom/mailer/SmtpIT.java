@@ -26,9 +26,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.ow2.chameleon.mail.Mail;
 import org.ow2.chameleon.mail.MailSenderService;
+import org.ow2.chameleon.testing.helpers.OSGiHelper;
+import org.wisdom.api.configuration.ApplicationConfiguration;
 import org.wisdom.test.parents.WisdomTest;
 
 import javax.inject.Inject;
+import java.lang.reflect.Method;
 import java.util.Properties;
 
 /**
@@ -41,6 +44,9 @@ public class SmtpIT extends WisdomTest {
     @Inject
     MailSenderService mailer;
 
+    @Inject
+    ApplicationConfiguration applicationConfiguration;
+
     @After
     public void tearDown() {
         // Clear all related system properties
@@ -51,6 +57,9 @@ public class SmtpIT extends WisdomTest {
         System.clearProperty("mail.smtp.username");
         System.clearProperty("mail.smtp.password");
         System.clearProperty("mail.smtp.debug");
+
+        // Restart the application configuration service to use the new system properties
+        restartApplicationConfiguration();
     }
 
     @Test
@@ -101,5 +110,19 @@ public class SmtpIT extends WisdomTest {
         System.setProperty("mail.smtp.username", USERNAME);
         System.setProperty("mail.smtp.password", PASSWORD);
         System.setProperty("mail.smtp.debug", "true");
+
+        // Restart the application configuration service to use the new system properties
+        restartApplicationConfiguration();
+    }
+
+    private void restartApplicationConfiguration() {
+        try {
+            Method reload = applicationConfiguration.getClass().getDeclaredMethod("reloadConfiguration");
+            reload.setAccessible(true);
+            reload.invoke(applicationConfiguration);
+            new OSGiHelper(context).waitForService(ApplicationConfiguration.class, null, 1000);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
