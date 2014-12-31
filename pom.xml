@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.wisdom-framework</groupId>
         <artifactId>wisdom-framework</artifactId>
-        <version>0.6.1</version>
+        <version>0.6.5</version>
     </parent>
 
     <artifactId>wisdom-mailer</artifactId>
@@ -16,7 +16,7 @@
 
     <properties>
         <!-- should match Wisdom parent -->
-        <wisdom.version>0.6.1</wisdom.version>
+        <wisdom.version>0.6.5</wisdom.version>
     </properties>
 
     <licenses>
