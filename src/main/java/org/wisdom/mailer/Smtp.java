@@ -26,11 +26,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wisdom.api.configuration.ApplicationConfiguration;
 
+import com.google.common.base.Joiner;
+
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 import javax.mail.*;
 import javax.mail.internet.*;
+
 import java.io.File;
 import java.util.*;
 
@@ -125,6 +128,11 @@ public class Smtp implements MailSenderService {
         properties.put(CONFHOST, host);
         properties.put(CONFPORT, port);
         properties.put("mail.smtps.quitwait", configuration.getBooleanWithDefault("mail.smtp.quitwait", false));
+        
+        List<String> trustedServers = configuration.getList("mail.tls.trustedservers");
+        if (!trustedServers.isEmpty()) {
+            properties.put("mail.smtp.ssl.trust", Joiner.on(',').join(trustedServers));
+        }
 
         connection = Connection.valueOf(configuration.getWithDefault("mail.smtp.connection",
                 Connection.NO_AUTH.toString()));
@@ -254,7 +262,7 @@ public class Smtp implements MailSenderService {
             session.setDebug(debug);
             // create a message
             MimeMessage msg = new MimeMessage(session);
-            msg.setFrom(new InternetAddress(from));
+            msg.setFrom(new InternetAddress(mail.from()));
 
             // Manage to and cc
             msg.setRecipients(Message.RecipientType.TO, convert(mail.to()));
