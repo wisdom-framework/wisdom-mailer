@@ -107,6 +107,7 @@ public class SmtpIT extends WisdomTest {
         System.setProperty("mail.smtp.host", "smtp.gmail.com");
         System.setProperty("mail.smtp.port", "465");
         System.setProperty("mail.smtp.from", USERNAME);
+        System.setProperty("mail.smtp.from-name", "Chameleon");
         System.setProperty("mail.smtp.username", USERNAME);
         System.setProperty("mail.smtp.password", PASSWORD);
         System.setProperty("mail.smtp.debug", "true");

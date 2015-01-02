@@ -19,6 +19,7 @@
  */
 package org.wisdom.mailer;
 
+import com.google.common.base.Joiner;
 import org.apache.felix.ipojo.annotations.*;
 import org.ow2.chameleon.mail.Mail;
 import org.ow2.chameleon.mail.MailSenderService;
@@ -26,15 +27,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wisdom.api.configuration.ApplicationConfiguration;
 
-import com.google.common.base.Joiner;
-
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 import javax.mail.*;
 import javax.mail.internet.*;
-
 import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.util.*;
 
 /**
@@ -78,6 +77,11 @@ public class Smtp implements MailSenderService {
     protected String from;
 
     /**
+     * An optional name (for the sender).
+     */
+    protected String fromName;
+
+    /**
      * The port.
      */
     protected int port;
@@ -115,6 +119,7 @@ public class Smtp implements MailSenderService {
     protected void configure() {
         host = configuration.getWithDefault(CONFHOST, MOCK_SERVER_NAME);
         from = configuration.getWithDefault("mail.smtp.from", DEFAULT_FROM);
+        fromName = configuration.getWithDefault("mail.smtp.from-name", null);
         useMock = MOCK_SERVER_NAME.equals(host);
 
         properties = new Properties();
@@ -128,7 +133,7 @@ public class Smtp implements MailSenderService {
         properties.put(CONFHOST, host);
         properties.put(CONFPORT, port);
         properties.put("mail.smtps.quitwait", configuration.getBooleanWithDefault("mail.smtp.quitwait", false));
-        
+
         List<String> trustedServers = configuration.getList("mail.tls.trustedservers");
         if (!trustedServers.isEmpty()) {
             properties.put("mail.smtp.ssl.trust", Joiner.on(',').join(trustedServers));
@@ -262,7 +267,15 @@ public class Smtp implements MailSenderService {
             session.setDebug(debug);
             // create a message
             MimeMessage msg = new MimeMessage(session);
-            msg.setFrom(new InternetAddress(mail.from()));
+            if (fromName != null) {
+                try {
+                    msg.setFrom(new InternetAddress(mail.from(), fromName));
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException("Bad encoding to set the sender name", e);
+                }
+            } else {
+                msg.setFrom(new InternetAddress(mail.from()));
+            }
 
             // Manage to and cc
             msg.setRecipients(Message.RecipientType.TO, convert(mail.to()));
