@@ -10,7 +10,7 @@
 
     <artifactId>wisdom-mailer</artifactId>
 
-    <version>0.5-SNAPSHOT</version>
+    <version>0.5</version>
 
     <packaging>wisdom</packaging>
 
