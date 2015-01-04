@@ -1,6 +1,6 @@
 {
     "name": "wisdom-mailer",
-    "version":"0.4",
+    "version":"0.5",
     "description": "The Wisdom Mailer is an extension to Wisdom allowing application to send mails. A Wisdom extension to send mails using SMTP. It supports most of the mail services such as gmail.", 
     "repository": {
         "type": "git",

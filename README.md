@@ -3,6 +3,8 @@
 The Wisdom Mailer is an extension to Wisdom allowing application to send mails. A Wisdom extension to send mails
 using SMTP. It supports most of the mail services such as gmail.
 
+The 0.5 version of Wisdom-Mailer requires Wisdom Framework 0.7.0+.
+
 ## Installation
 
 Add the following dependency to your `pom.xml` file:
@@ -11,7 +13,8 @@ Add the following dependency to your `pom.xml` file:
 <dependency>
     <groupId>org.wisdom-framework</groupId>
     <artifactId>wisdom-mailer</artifactId>
-    <version>${project.version}</version>
+    <!-- Use latest version here -->
+    <version>0.5</version>
 </dependency>
 ````
 
